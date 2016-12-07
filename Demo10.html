@@ -1,0 +1,496 @@
+<html>
+<head>
+<div id="container">
+<div id="cnvsFrame">
+<canvas id="cnvs"> </canvas>
+</div>
+</div>
+    <img src="images/hw5/p1.jpg" class="flc1" onclick="javascript:tst(1);" />
+    <img src="images/hw5/p2.jpg" class="flc2" onclick="javascript:tst(2);" />
+	<img src="images/hw5/p3.jpg" class="flc3" onclick="javascript:tst(3);" />
+	<img src="images/hw5/p4.jpg" class="flc4" onclick="javascript:tst(4);" />
+<div style="clear:both"></div>
+
+<div>
+    <button id="save">
+        Save
+    </button>
+	
+    <button id="reload">
+        Reload
+    </button>  
+	
+    <button id="clear">
+        Clear Local Storage
+    </button>
+	
+    <button id="refresh">
+        Reload Page
+    </button>	
+</div>
+    
+</script>
+
+<style>
+#container {
+    width:50%;
+    float:left;
+    background-color:pink;
+	margin: 5px;
+}
+#cnvsFrame {
+    height: 0;
+    padding-bottom:100%;
+}
+
+.fl {
+    float:left;
+    margin:20px;
+}
+.flc1 {
+    float:right;
+    margin:10px;
+    width:15%;
+}
+.flc2 {
+    float:right;
+    margin:10px;
+	margin-right:30px;
+    width:20%;
+}
+
+.flc3 {
+    float:right;
+	margin-right:60px;
+    width:15%;
+}
+.flc4 {
+    float:right;
+    width:20%;
+}
+body {
+    overflow: auto;
+}
+</style>
+</head>
+
+<body>
+
+<script src="http://cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js"></script>
+<script src="js/KeyboardState.js"></script>
+<script src="js/jquery-2.1.4.min.js"></script>
+
+<script>
+
+var camera, scene, renderer, geometry, material, mesh, light, controls;
+var tex1, tex2 ,tex3, tex4, wall;
+var raycaster;
+var mouse = new THREE.Vector2();
+var pickables = [];
+var pic=0;
+var mesh2;
+var mesh3;
+var hang1,hang2,hang3,hang4;
+var hang1pos = new THREE.Vector3,hang2pos,hang3pos,hang4pos;
+var hang1rot,hang2rot,hang3rot,hang4rot;
+//var 
+init();
+animate();
+var ww,hh;
+function init() {
+    var theCanvas = document.getElementById("cnvs");
+    var theCanvasFrame = document.getElementById("cnvsFrame");
+
+    renderer = new THREE.WebGLRenderer({
+        canvas: theCanvas,
+        antialias: true
+    });
+    ww = theCanvasFrame.clientWidth;
+    hh = theCanvasFrame.clientHeight;
+    renderer.setSize(ww, hh);
+    renderer.setClearColor(0x222222);
+
+    scene = new THREE.Scene();
+
+    camera = new THREE.PerspectiveCamera(50, ww/hh, 1, 1000);
+    camera.position.z = 400;
+	camera.position.y = 100;
+	camera.position.x = -50;
+	camera.lookAt (new THREE.Vector3(50,50,0));
+    scene.add(camera);
+
+    //////////////////////////////////////////////////////
+	var floorTexture = new THREE.ImageUtils.loadTexture( 'images/hw5/floor.jpg' );
+	floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping; 
+	floorTexture.repeat.set( 10, 10);
+	
+    THREE.ImageUtils.crossOrigin = '';
+    tex1 = THREE.ImageUtils.loadTexture('images/hw5/p1.jpg');
+    tex2 = THREE.ImageUtils.loadTexture('images/hw5/p2.jpg');
+    tex3 = THREE.ImageUtils.loadTexture('images/hw5/p3.jpg');
+    tex4 = THREE.ImageUtils.loadTexture('images/hw5/p4.jpg');
+    wall = THREE.ImageUtils.loadTexture('images/hw5/wall.jpg');	
+    geometry = new THREE.PlaneGeometry(100, 100);
+    material = new THREE.MeshLambertMaterial({map:wall,color:0xffffff});
+
+    mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+	mesh.position.set(-50,50,0);
+	
+	mesh2 = new THREE.Mesh(geometry, material);
+	scene.add(mesh2);
+	mesh2.position.set(55,50,0);
+	
+	mesh3 = new THREE.Mesh(geometry, material);
+	scene.add(mesh3);
+	mesh3.position.set(145,50,40);
+	mesh3.rotation.y=-3.14/4;
+    pickables = [mesh,mesh2,mesh3];	
+	
+    picture = new THREE.Mesh(
+    new THREE.PlaneGeometry(10, 10),
+    new THREE.MeshBasicMaterial({
+        color: 0xff0000,
+        polygonOffset: true,
+        polygonOffsetUnits: -4.0,
+        polygonOffsetFactor: -1.0,
+    }));
+ //   scene.add(picture);
+	
+	hang1 = new THREE.Mesh(
+    new THREE.PlaneGeometry(41, 50),
+    new THREE.MeshBasicMaterial({
+    }));
+
+	hang2 = new THREE.Mesh(
+    new THREE.PlaneGeometry(50, 40),
+    new THREE.MeshBasicMaterial({
+    }));
+	
+	hang3 = new THREE.Mesh(
+    new THREE.PlaneGeometry(45, 35),
+    new THREE.MeshBasicMaterial({
+    }));
+
+	hang4 = new THREE.Mesh(
+    new THREE.PlaneGeometry(45, 36),
+    new THREE.MeshBasicMaterial({
+    }));	
+	
+    var floor = new THREE.Mesh(new THREE.PlaneGeometry(600, 600, 30, 30),
+    new THREE.MeshLambertMaterial({ map: floorTexture, side: THREE.DoubleSide }));
+    floor.rotation.x = -Math.PI / 2;
+    scene.add(floor);
+	
+    light = new THREE.PointLight(0xffffff);
+    light.position.set(0, 300, 200);
+    scene.add(light);
+
+    var gridXZ = new THREE.GridHelper(100, 10);
+    gridXZ.setColors(new THREE.Color(0xff0000), new THREE.Color(0xffffff));
+//    scene.add(gridXZ);
+
+	
+//	document.body.appendChild(renderer.domElement);
+	raycaster = new THREE.Raycaster();
+	document.addEventListener('mousedown', onDocumentMouseDown, false);
+    // the following is not needed for "embed" mode
+    // document.body.appendChild(renderer.domElement);
+}
+
+// remember "no warp in <body>"
+//
+function onDocumentMouseDown(event) {
+
+    // PICKING DETAILS: 
+    // convert mouse.xy = [-1,1]^2 (NDC)
+    // unproject (mouse.xy, 1) to a point on the far plane (in world coordinate)
+    // set raycaster (origin, direction)
+    // find intersection objects, (closest first) 
+    // each record as
+    // [ { distance, point, face, faceIndex, object }, ... ]
+
+    event.preventDefault();
+    mouse.x = ((event.clientX-event.target.offsetLeft) / ww) * 2 - 1;
+    mouse.y = -((event.clientY-event.target.offsetTop)/ hh) * 2 + 1;
+    // find intersections
+    var vector = new THREE.Vector3(mouse.x, mouse.y, 1).unproject(camera);
+    raycaster.set(camera.position, vector.sub(camera.position).normalize());
+    var intersects = raycaster.intersectObjects(pickables);
+    if (intersects.length > 0) {
+		console.log(intersects[0].point);
+	
+        picture.position.copy(intersects[0].point);
+        picture.rotation.copy (intersects[0].object.rotation);
+		if(pic==1&&intersects[0].object===mesh){
+			hang1.material = new THREE.MeshBasicMaterial({
+		    map: tex1,
+            side: THREE.DoubleSide,
+			polygonOffset: true,
+			polygonOffsetUnits: -4.0,
+			polygonOffsetFactor: -1.0
+        });
+			scene.add(hang1);
+			hang1.position.copy(picture.position);
+			hang1.rotation.copy (picture.rotation);
+			hang1pos.copy(picture.position);
+			console.log(hang1pos);
+		}
+		if(pic==2&&intersects[0].object===mesh){
+			hang2.material = new THREE.MeshBasicMaterial({
+		    map: tex2,
+            side: THREE.DoubleSide,
+			polygonOffset: true,
+			polygonOffsetUnits: -4.0,
+			polygonOffsetFactor: -1.0
+        });
+			scene.add(hang2);
+			hang2.position.copy(picture.position);
+			hang2.rotation.copy (picture.rotation);
+		}
+		if(pic==3&&intersects[0].object===mesh){
+			hang3.material = new THREE.MeshBasicMaterial({
+		    map: tex3,
+            side: THREE.DoubleSide,
+			polygonOffset: true,
+			polygonOffsetUnits: -4.0,
+			polygonOffsetFactor: -1.0
+        });
+			scene.add(hang3);
+			hang3.position.copy(picture.position);
+			hang3.rotation.copy (picture.rotation);
+		}
+		if(pic==4&&intersects[0].object===mesh){
+			hang4.material = new THREE.MeshBasicMaterial({
+		    map: tex4,
+            side: THREE.DoubleSide,
+			polygonOffset: true,
+			polygonOffsetUnits: -4.0,
+			polygonOffsetFactor: -1.0
+        });
+			scene.add(hang4);
+			hang4.position.copy(picture.position);
+			hang4.rotation.copy (picture.rotation);
+		}
+		///mesh2
+		if(pic==1&&intersects[0].object===mesh2){
+			hang1.material = new THREE.MeshBasicMaterial({
+		    map: tex1,
+            side: THREE.DoubleSide,
+			polygonOffset: true,
+			polygonOffsetUnits: -4.0,
+			polygonOffsetFactor: -1.0
+        });
+			scene.add(hang1);
+			hang1.position.copy(picture.position);
+			hang1.rotation.copy (picture.rotation);
+		}
+		if(pic==2&&intersects[0].object===mesh2){
+			hang2.material = new THREE.MeshBasicMaterial({
+		    map: tex2,
+            side: THREE.DoubleSide,
+			polygonOffset: true,
+			polygonOffsetUnits: -4.0,
+			polygonOffsetFactor: -1.0
+        });
+			scene.add(hang2);
+			hang2.position.copy(picture.position);
+			hang2.rotation.copy (picture.rotation);
+		}
+		if(pic==3&&intersects[0].object===mesh2){
+			hang3.material = new THREE.MeshBasicMaterial({
+		    map: tex3,
+            side: THREE.DoubleSide,
+			polygonOffset: true,
+			polygonOffsetUnits: -4.0,
+			polygonOffsetFactor: -1.0
+        });
+			scene.add(hang3);
+			hang3.position.copy(picture.position);
+			hang3.rotation.copy (picture.rotation);
+		}
+		if(pic==4&&intersects[0].object===mesh2){
+			hang4.material = new THREE.MeshBasicMaterial({
+		    map: tex4,
+            side: THREE.DoubleSide,
+			polygonOffset: true,
+			polygonOffsetUnits: -4.0,
+			polygonOffsetFactor: -1.0
+        });
+			scene.add(hang4);
+			hang4.position.copy(picture.position);
+			hang4.rotation.copy (picture.rotation);
+		}
+		///mesh3
+		if(pic==1&&intersects[0].object===mesh3){
+			hang1.material = new THREE.MeshBasicMaterial({
+		    map: tex1,
+            side: THREE.DoubleSide,
+			polygonOffset: true,
+			polygonOffsetUnits: -4.0,
+			polygonOffsetFactor: -1.0
+        });
+			scene.add(hang1);
+			hang1.position.copy(picture.position);
+			hang1.rotation.copy (picture.rotation);
+		}
+		if(pic==2&&intersects[0].object===mesh3){
+			hang2.material = new THREE.MeshBasicMaterial({
+		    map: tex2,
+            side: THREE.DoubleSide,
+			polygonOffset: true,
+			polygonOffsetUnits: -4.0,
+			polygonOffsetFactor: -1.0
+        });
+			scene.add(hang2);
+			hang2.position.copy(picture.position);
+			hang2.rotation.copy (picture.rotation);
+		}
+		if(pic==3&&intersects[0].object===mesh3){
+			hang3.material = new THREE.MeshBasicMaterial({
+		    map: tex3,
+            side: THREE.DoubleSide,
+			polygonOffset: true,
+			polygonOffsetUnits: -4.0,
+			polygonOffsetFactor: -1.0
+        });
+			scene.add(hang3);
+			hang3.position.copy(picture.position);
+			hang3.rotation.copy (picture.rotation);
+		}
+		if(pic==4&&intersects[0].object===mesh3){
+			hang4.material = new THREE.MeshBasicMaterial({
+		    map: tex4,
+            side: THREE.DoubleSide,
+			polygonOffset: true,
+			polygonOffsetUnits: -4.0,
+			polygonOffsetFactor: -1.0
+        });
+			scene.add(hang4);
+			hang4.position.copy(picture.position);
+			hang4.rotation.copy (picture.rotation);
+		}	
+    }
+
+}
+
+function tst(which) {
+
+	if(which===1)
+	pic=1;
+	if(which===2)
+	pic=2;
+	if(which===3)
+	pic=3;
+	if(which===4)
+	pic=4;	
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    render();
+}
+
+function render() {
+    renderer.render(scene, camera);
+}
+
+$("#save").click(function(){
+	var objStr = JSON.stringify(hang1);
+    localStorage.setItem("hang1", objStr);
+	
+	var objStr = JSON.stringify(hang2);
+    localStorage.setItem("hang2", objStr);
+
+	var objStr = JSON.stringify(hang3);
+    localStorage.setItem("hang3", objStr);
+
+	var objStr = JSON.stringify(hang4);
+    localStorage.setItem("hang4", objStr);	
+});
+$("#reload").click(function(){
+    var objStr = localStorage.getItem("hang1");
+    var hang11 = null;
+	hang11= JSON.parse(objStr);
+	if(hang11!=null)
+	{
+		hang1.material = new THREE.MeshBasicMaterial({
+				map: tex1,
+				side: THREE.DoubleSide,
+				polygonOffset: true,
+				polygonOffsetUnits: -4.0,
+				polygonOffsetFactor: -1.0
+			});
+		scene.add(hang1);
+		hang1.position.copy(new THREE.Vector3( hang11.object.matrix[12], hang11.object.matrix[13], hang11.object.matrix[14] ));
+		if(hang11.object.matrix[12]>110){hang1.rotation.y= -3.14/4;}
+	}
+	
+    objStr = localStorage.getItem("hang2");
+    var hang22 = null;
+	hang22= JSON.parse(objStr);
+	if(hang22!=null){
+		hang2.material = new THREE.MeshBasicMaterial({
+				map: tex2,
+				side: THREE.DoubleSide,
+				polygonOffset: true,
+				polygonOffsetUnits: -4.0,
+				polygonOffsetFactor: -1.0
+			});
+		scene.add(hang2);
+		hang2.position.copy(new THREE.Vector3( hang22.object.matrix[12], hang22.object.matrix[13], hang22.object.matrix[14] ));	
+		if(hang22.object.matrix[12]>110){hang2.rotation.y= -3.14/4;}	
+	}
+	
+    objStr = localStorage.getItem("hang3");
+    var hang33 = null;
+	hang33= JSON.parse(objStr);
+	if(hang33!=null){
+		hang3.material = new THREE.MeshBasicMaterial({
+				map: tex3,
+				side: THREE.DoubleSide,
+				polygonOffset: true,
+				polygonOffsetUnits: -4.0,
+				polygonOffsetFactor: -1.0
+			});
+		scene.add(hang3);
+		hang3.position.copy(new THREE.Vector3( hang33.object.matrix[12], hang33.object.matrix[13], hang33.object.matrix[14] ));
+		if(hang33.object.matrix[12]>110){hang3.rotation.y= -3.14/4;}	
+	}
+	
+    objStr = localStorage.getItem("hang4");
+    var hang44 = null;
+	hang44= JSON.parse(objStr);
+	if(hang44!=null)
+	{
+		hang4.material = new THREE.MeshBasicMaterial({
+				map: tex4,
+				side: THREE.DoubleSide,
+				polygonOffset: true,
+				polygonOffsetUnits: -4.0,
+				polygonOffsetFactor: -1.0
+			});
+		scene.add(hang4);	
+		hang4.position.copy(new THREE.Vector3( hang44.object.matrix[12], hang44.object.matrix[13], hang44.object.matrix[14] ));	
+		if(hang44.object.matrix[12]>110){hang4.rotation.y= -3.14/4;}	
+	}
+});
+
+$("#clear").click(function(){
+    localStorage.removeItem("hang1");
+    localStorage.removeItem("hang2");
+    localStorage.removeItem("hang3");   
+    localStorage.removeItem("hang4");	
+    //clear all records
+    //localStorage.clear();
+});
+
+$("#refresh").click(function(){
+    window.location.reload();
+});
+
+
+</script>
+</body>
+
+</html>

@@ -1,0 +1,533 @@
+<html>
+<head>
+<div id="state"></div>
+<div id="container">
+    <div id="cnvsFrame">
+        <canvas id="cnvs"></canvas>
+    </div>
+</div>
+
+<div id="player">User Name:
+    <input id="user" type="text" value="yihom">
+    <br/>
+    <br/>
+    <button id="login">Login</button>
+	<button id="clear">clear records</button>
+	<button id="reload">replay</button>
+    <p id='greeting'></p>
+</div>
+
+
+<style>
+
+#info {
+    position: absolute;
+    top: 0px;
+    width: 100%;
+    padding: 10px;
+    text-align: center;
+    color: #ffff00
+}
+
+#player {
+	float:right;
+	margin-right: 80px;
+	margin-top: 30px;
+}
+#state {
+    position: absolute;
+    top: 50px;
+	right: 150px;
+    width: 100%;
+    color: #ffffff;
+    text-align: center;
+}
+#container {
+	float:left;
+	background:pink; 
+	margin: 0px;
+	width:70%;
+}
+#cnvsFrame {
+    height: 0;
+    padding-bottom:100%;
+}
+
+
+body {
+    overflow: hidden;
+}
+
+</style>
+</head>
+
+<body>
+
+<script src="http://cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js"></script>
+<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
+<script src="droid_serif_bold.typeface.js"></script>
+<script src='threex.text.js'></script>
+<script src="js/jquery-2.1.4.min.js"></script>
+
+<audio id="dead" style="display:none">
+<source src="sound/dead.mp3" type='audio/mp3'>
+</audio>
+<audio id="hammeronce" style="display:none">
+<source src="sound/hammeronce.wav" type='audio/wav'>
+</audio>
+
+<script id="vertexShader" type="x-shader/x-vertex">
+    void main() {
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+</script>
+<script id="fragmentShader" type="x-shader/x-fragment">
+uniform float time;
+
+float lengthsq(vec2 p) { return dot(p, p); }
+
+float noise(vec2 p){
+	return fract(sin(fract(sin(p.x) * (43.13311)) + p.y) * 31.001);
+}
+
+
+float worley(vec2 p) {	
+	// Initialise distance to a large value
+	float d = 20.0;
+	for (int xo = -2; xo <= 2; xo++) {
+		for (int yo = -2; yo <= 2; yo++) {
+			// Test all surrounding cells to see if distance is smaller.
+			vec2 test_cell = floor(p) + vec2(xo, yo);
+			// Update distance if smaller.
+			float n0 = noise(test_cell);
+			float n1 = noise(test_cell + vec2(134.0,8413.0));
+			
+			float ox = mix( n0, n1, sin(time) );
+			float oy = mix( n0, n1, cos(time) );
+			
+			vec2 c = test_cell + vec2(ox,oy);
+			d = min(d, 
+				lengthsq(p - c)
+			       );
+		}
+	}
+	return d;
+}
+
+void main() {
+	vec2 uv = gl_FragCoord.xy;
+	float t = 0.9 * worley(gl_FragCoord.xy / 20.0);
+	gl_FragColor = vec4(vec3(t,sqrt(t),t), 1.0);
+}
+</script>
+
+
+<script>
+var camera, scene, renderer, geometry, material, mesh, controls;
+var clock = new THREE.Clock();
+var pucks = [];
+var which = 1;
+var mesh2,mesh3,mesh4,mesh5,mesh6,mesh7;
+var mouse = new THREE.Vector2();
+var wallpos = 0;
+var death=0;
+var inscore=0;
+var life=5;
+var stateInfo;
+var mesh9,mesh10;
+var ww,hh;
+var name;
+var goplay=5;
+var records = [];
+var heigh=0;
+var hammeronce,dead;
+var gg=0;
+
+var Puck = function () {
+    this.vel = new THREE.Vector3();
+    this.pos = new THREE.Vector3();
+    this.pColor = new THREE.Color();
+    this.mesh = new THREE.Mesh();
+	this.life = 1;
+    this.pointLight = new THREE.PointLight(0xffffff, 0.3);
+};
+
+Puck.prototype.update = function (dt) {
+    this.pos.add(this.vel.clone().multiplyScalar(dt));
+
+    this.mesh.position.copy(this.pos);
+    this.pointLight.position.set(this.pos.x, 10, this.pos.z);
+    this.pointLight.color = this.pColor;
+    this.mesh.material.color = this.pColor;
+
+};
+
+Puck.prototype.collision = function () {
+    // collision
+    if (this.pos.x > 100) {
+        this.pos.x = 100;
+        this.vel.set(-this.vel.x, 0, this.vel.z);
+        this.pColor.setHSL(Math.random(), Math.random(), Math.random() / 2 + 0.5);
+		if(this.mesh.visible === true)
+		hammeronce.play();
+    } else if (this.pos.x < -100) {
+        this.pos.x = -100;
+        this.vel.set(-this.vel.x, 0, this.vel.z);
+        this.pColor.setHSL(Math.random(), Math.random(), Math.random() / 2 + 0.5);
+		if(this.mesh.visible === true)
+		hammeronce.play();		
+    }
+	if(this.mesh.visible == true){
+    if (this.pos.z > 100) {
+		if(this.pos.x<30+wallpos&&this.pos.x>-30-wallpos){
+			if(this.pos.x<mesh7.position.x+16&&this.pos.x>mesh7.position.x-16){
+				this.pos.z = 100;
+				this.vel.set(this.vel.x, 0, -this.vel.z);
+				this.pColor.setHSL(Math.random(), Math.random(), Math.random() / 2 + 0.5);
+				if(this.mesh.visible === true)
+				hammeronce.play();		
+			}else {
+				this.mesh.visible = false;
+				this.life = 0;
+				this.pointLight.intensity = 0;
+			}
+		}
+		else{
+				this.pos.z = 100;
+				this.vel.set(this.vel.x, 0, -this.vel.z);
+				this.pColor.setHSL(Math.random(), Math.random(), Math.random() / 2 + 0.5);
+				if(this.mesh.visible === true)
+				hammeronce.play();		
+			}
+
+    } else if (this.pos.z < -100) {
+		if(this.pos.x<30+wallpos&&this.pos.x>-30-wallpos){
+			if(this.pos.x<mesh8.position.x+16&&this.pos.x>mesh8.position.x-16){
+				this.pos.z = -100;
+				this.vel.set(this.vel.x, 0, -this.vel.z);
+				this.pColor.setHSL(Math.random(), Math.random(), Math.random() / 2 + 0.5);
+				if(this.mesh.visible === true)
+				hammeronce.play();		
+			}else {
+				this.mesh.visible = false;
+				this.life = 0;
+				this.pointLight.intensity = 0;
+			}
+		}
+		else{
+				this.pos.z = -100;
+				this.vel.set(this.vel.x, 0, -this.vel.z);
+				this.pColor.setHSL(Math.random(), Math.random(), Math.random() / 2 + 0.5);
+				if(this.mesh.visible === true)
+				hammeronce.play();		
+			}
+    }
+	}
+}
+
+init();
+animate();
+
+function newPuck() {
+    var puck = new Puck();
+    puck.pos = new THREE.Vector3(0, 1, 0);
+    puck.vel = new THREE.Vector3(150 * (Math.random() * 2 - 1), 0, 170 * (Math.random() * 2 - 1));
+    puck.pColor = new THREE.Color(0xff0000);
+    puck.mesh = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 2, 20),
+    new THREE.MeshBasicMaterial());
+    puck.mesh.material.color = puck.pColor;
+    scene.add(puck.mesh);
+    scene.add(puck.pointLight);
+    return puck;
+}
+
+function init() {
+    var theCanvas = document.getElementById("cnvs");
+    var theCanvasFrame = document.getElementById("cnvsFrame");
+	stateInfo = window.document.getElementById('state');
+	hammeronce = document.getElementById ('hammeronce');
+	dead = document.getElementById ('dead');
+	
+    renderer = new THREE.WebGLRenderer({
+        canvas: theCanvas,
+        antialias: true
+    });	
+	
+	ww = theCanvasFrame.clientWidth;
+    hh = theCanvasFrame.clientHeight;
+	renderer.setSize(ww, hh);
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(50, ww/hh, 1, 1000);
+    camera.position.z = 500;
+	camera.position.y = 300;
+    scene.add(camera);
+
+	mesh9	= new THREEx.Text('Game Over');
+	mesh9.scale.multiplyScalar(30);
+	mesh9.position.z= -150;
+	mesh9.position.y= 30;
+	
+    geometry = new THREE.BoxGeometry(220, 30, 10);
+    material = new THREE.MeshBasicMaterial({
+        transparent: true,
+        color: 0xffffff,
+        opacity: 0.4
+    });
+
+    geometry1 = new THREE.BoxGeometry(80, 30, 10);
+
+    geometry2 = new THREE.BoxGeometry(30, 30, 10);
+    material2 = new THREE.MeshBasicMaterial({
+        transparent: true,
+        color: 0x0000ff,
+        opacity: 0.4
+    });	
+
+	meshMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+            time: {
+                type: 'f',
+                value: 1.0
+            }
+        },
+        vertexShader: document.getElementById('vertexShader').textContent,
+        fragmentShader: document.getElementById('fragmentShader').textContent
+    });
+	
+    mesh = new THREE.Mesh(geometry1, material);
+    mesh.position.set(70, 15, 105);
+    scene.add(mesh);
+    mesh2 = mesh.clone();
+    mesh2.position.set(70, 15, -105);
+    scene.add(mesh2);
+	mesh5 = mesh.clone();
+    mesh5.position.set(-70, 15, -105);
+    scene.add(mesh5);	
+	mesh6 = mesh.clone();
+    mesh6.position.set(-70, 15, 105);
+    scene.add(mesh6);		
+	mesh7 = new THREE.Mesh(geometry2, meshMaterial); 
+    mesh7.position.set(0, 15, 105);
+    scene.add(mesh7);	
+	mesh8 = new THREE.Mesh(geometry2, meshMaterial); 
+    mesh8.position.set(0, 15, -105);
+    scene.add(mesh8);
+	
+    mesh3 = new THREE.Mesh(geometry, material);
+    mesh3.rotation.y = Math.PI / 2;
+    mesh3.position.set(105, 15, 0);
+    scene.add(mesh3);
+    mesh4 = new THREE.Mesh(geometry, material);
+    mesh4.rotation.y = Math.PI / 2;
+    mesh4.position.set(-105, 15, 0);
+    scene.add(mesh4);
+
+	
+	
+    ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200, 130, 130),
+    new THREE.MeshLambertMaterial({
+        color: 0xffffff
+    }));
+
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
+
+    //renderer = new THREE.WebGLRenderer();
+    //renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x888888);
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    var ambientLight = new THREE.AmbientLight(0x111111);
+    scene.add(ambientLight);
+
+    //document.body.appendChild(renderer.domElement);
+	var objStr = localStorage.getItem("scores");
+	var record_new = JSON.parse(objStr);
+	if(record_new != null){
+	for (var i = 0; i < record_new.length; i++){
+	console.log(record_new[i]);
+	records.push({
+        name: record_new[i].name,
+        score: record_new[i].score
+    });}}
+	
+	
+    // add first puck
+    pucks.push(newPuck());
+	pucks[0].vel = new THREE.Vector3(0,0,0);
+    // add remaining pucks, invisible and zero intensity
+    
+    for (var i = 1; i < 8; i++) {
+        var thispuck = newPuck();
+        thispuck.mesh.visible = false;
+        thispuck.pointLight.intensity = 0;
+        pucks.push(thispuck);
+    }
+
+    // start first new puck
+//    setTimeout (startNewPuck, 1000);
+//	setTimeout (bigger, 1000);
+//	setTimeout (point, 0);
+//    localStorage.removeItem("scores");	
+	window.addEventListener( 'mousemove', onDocumentMouseMove, false );
+}
+
+function onDocumentMouseMove( event ) {
+	event.preventDefault();
+    mouse.x = ((event.clientX-event.target.offsetLeft) / ww) * 2 - 1;
+    mouse.y = -((event.clientY-event.target.offsetTop)/ hh) * 2 + 1;
+	
+	var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 ).unproject( camera );
+	var raycaster = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
+
+	var intersects = raycaster.intersectObject( ground );
+	if (intersects.length > 0) {
+		var move = intersects[0].point.clone();
+		//mesh7.position.copy (move);
+		mesh7.position.x = move.x;
+		mesh8.position.x = move.x;
+	}
+}
+
+
+function startNewPuck() {
+    //console.log (which);
+    pucks[which].mesh.visible = true;
+    pucks[which].pointLight.intensity = 0.3;
+    which++;
+    if (which <= 6)
+        setTimeout (startNewPuck, 1000);
+}
+
+function survive(){
+	death=0;
+	for(var i = 0; i<8; i++ ){
+		if(pucks[i].life==0){
+			death++;
+		}
+	}
+}
+
+function bigger(){
+	if(wallpos<=70&&life>0){
+		mesh5.position.x-=2;
+		mesh2.position.x+=2;
+		mesh6.position.x-=2;
+		mesh.position.x+=2;	
+		wallpos+=2;
+		setTimeout (bigger, 1000);
+	}
+}
+
+function start(){
+	if(goplay==0)
+	{
+		pucks[0].vel = new THREE.Vector3(150 * (Math.random() * 2 - 1), 0, 170 * (Math.random() * 2 - 1));
+		setTimeout (startNewPuck, 1000);
+		setTimeout (bigger, 1000);
+		setTimeout (point, 0);
+			}
+	else{
+		goplay--;
+		setTimeout (start, 1000);
+	}
+}
+function over(){
+	for(var i = 0; i<6; i++ ){
+		pucks[i].vel.set(0,0,0);
+	}
+}
+
+function point(){
+	if(life>0)
+	{
+		inscore++;
+		setTimeout (point, 1000);
+	}
+}
+
+function animate() {
+    var dt = clock.getDelta();
+	
+    meshMaterial.uniforms.time.value += dt * 2;
+	
+    pucks.forEach(function (puck) {
+        puck.update(dt);
+        puck.collision();
+    });
+	life=5;
+	survive();
+	life=5-death;
+
+	if(life>0){
+		var text = 'score: ' + inscore.toFixed(2) + ', ' + 'life: ' + life.toFixed(2)+'<br/>';
+		stateInfo.innerHTML = text;
+	}
+	else if(gg==0){
+		dead.play();
+		gg=1;
+		over();
+		save();
+		var text = 'score: ' + inscore.toFixed(2) + ', ' + 'life: ' + life.toFixed(2)+'<br/>';
+		stateInfo.innerHTML = text;		
+		scene.add(mesh9);
+	}
+	
+    controls.update();
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+}
+
+$("#login").click(function () {
+	start();
+    name = document.getElementById('user').value;
+    alert(name + " is playing");
+	
+    var result = searchUser(name);
+    if (result >= 0) {
+        document.getElementById('greeting').innerHTML = "Your high score: " + result;
+    } else {
+        document.getElementById('greeting').innerHTML = "Welcome!";
+    }
+});
+
+
+$("#clear").click(function(){
+    localStorage.removeItem("scores");
+    alert("clear all cache")
+});
+
+$("#reload").click(function(){
+    window.location.reload();
+});
+
+function save(){
+	
+    records.push({
+        name: name,
+        score: inscore
+    });
+
+    var objStr = JSON.stringify(records);
+    localStorage.setItem("scores", objStr);
+}
+
+function searchUser(name) {
+//	var objStr = localStorage.getItem("scores");
+//	records= JSON.parse(objStr);
+	
+    for (var i = 0; i < records.length; i++) {
+        if (records[i].name === name) {
+		if(records[i].score>heigh)
+			heigh=records[i].score;
+        }
+    }
+	if(heigh!=0)
+	return heigh;
+	else
+    return -1;
+}
+</script>
+</body>
+
+</html>
